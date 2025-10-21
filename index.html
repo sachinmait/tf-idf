@@ -249,15 +249,15 @@
         </header>
 
         <div class="tab-buttons">
-            <button class="tab-btn learn active" onclick="switchTab('learn')">
+            <button type="button" class="tab-btn learn active" onclick="switchTab('learn')">
                 <i data-lucide="book-open"></i>
                 Learn
             </button>
-            <button class="tab-btn calculator" onclick="switchTab('calculator')">
+            <button type="button" class="tab-btn calculator" onclick="switchTab('calculator')">
                 <i data-lucide="calculator"></i>
                 Calculator
             </button>
-            <button class="tab-btn matrix" onclick="switchTab('matrix')">
+            <button type="button" class="tab-btn matrix" onclick="switchTab('matrix')">
                 <i data-lucide="play"></i>
                 Full Matrix
             </button>
@@ -381,6 +381,7 @@
     </div>
 
     <script>
+        // initialize icons once DOM elements are present
         lucide.createIcons();
 
         var documents = [
@@ -392,32 +393,41 @@
         var selectedDoc = 0;
         var selectedWord = '';
 
+        // tokenize: extract words, handle punctuation and apostrophes (keeps contractions)
+        function tokenize(text) {
+            if (!text) return [];
+            // \b[\w']+\b will match words and allow apostrophes inside words (e.g., don't)
+            var matches = text.toLowerCase().match(/\b[\w']+\b/g);
+            return matches || [];
+        }
+
         function calculateTF(term, doc) {
-            var words = doc.toLowerCase().split(' ');
+            var words = tokenize(doc);
+            if (words.length === 0) return 0;
+            var termLower = term.toLowerCase();
             var termCount = 0;
             for (var i = 0; i < words.length; i++) {
-                if (words[i] === term.toLowerCase()) {
-                    termCount++;
-                }
+                if (words[i] === termLower) termCount++;
             }
             return termCount / words.length;
         }
 
         function calculateDF(term) {
+            var termLower = term.toLowerCase();
             var count = 0;
             for (var i = 0; i < documents.length; i++) {
-                var words = documents[i].toLowerCase().split(' ');
-                if (words.indexOf(term.toLowerCase()) !== -1) {
-                    count++;
-                }
+                var words = tokenize(documents[i]);
+                if (words.indexOf(termLower) !== -1) count++;
             }
             return count;
         }
 
         function calculateIDF(term) {
             var df = calculateDF(term);
-            if (df === 0) return 0;
-            return Math.log(documents.length / df);
+            var N = documents.length;
+            // Smoothed IDF to avoid division-by-zero and provide better behaved scores:
+            // IDF = log((N + 1) / (df + 1)) + 1
+            return Math.log((N + 1) / (df + 1)) + 1;
         }
 
         function calculateTFIDF(term, docIndex) {
@@ -427,14 +437,14 @@
         }
 
         function getAllWords() {
-            var allWords = documents.join(' ').toLowerCase().split(' ');
-            var uniqueWords = [];
-            for (var i = 0; i < allWords.length; i++) {
-                if (uniqueWords.indexOf(allWords[i]) === -1) {
-                    uniqueWords.push(allWords[i]);
+            var wordSet = new Set();
+            for (var i = 0; i < documents.length; i++) {
+                var tokens = tokenize(documents[i]);
+                for (var t = 0; t < tokens.length; t++) {
+                    wordSet.add(tokens[t]);
                 }
             }
-            return uniqueWords.sort();
+            return Array.from(wordSet).sort();
         }
 
         function switchTab(tabName) {
@@ -448,8 +458,10 @@
                 buttons[i].classList.remove('active');
             }
             
-            document.getElementById(tabName + '-tab').classList.add('active');
-            document.querySelector('.tab-btn.' + tabName).classList.add('active');
+            var tabEl = document.getElementById(tabName + '-tab');
+            if (tabEl) tabEl.classList.add('active');
+            var btnEl = document.querySelector('.tab-btn.' + tabName);
+            if (btnEl) btnEl.classList.add('active');
             
             if (tabName === 'calculator') {
                 renderCalculator();
@@ -460,30 +472,51 @@
 
         function renderCalculator() {
             var docList = document.getElementById('doc-list');
-            var html = '';
+            docList.innerHTML = '';
             for (var i = 0; i < documents.length; i++) {
-                var selectedClass = selectedDoc === i ? 'selected' : '';
-                html += '<div class="doc-item ' + selectedClass + '" onclick="selectDoc(' + i + ')">';
-                html += '<span style="font-weight: 900; margin-right: 0.5rem;">Doc ' + (i + 1) + ':</span>';
-                html += '<span style="font-family: Courier New, monospace;">' + documents[i] + '</span>';
-                html += '</div>';
+                var div = document.createElement('div');
+                div.className = 'doc-item' + (selectedDoc === i ? ' selected' : '');
+                div.setAttribute('role', 'button');
+                div.tabIndex = 0;
+                (function(idx){
+                    div.addEventListener('click', function(){ selectDoc(idx); });
+                    div.addEventListener('keypress', function(e){ if (e.key === 'Enter' || e.key === ' ') selectDoc(idx); });
+                })(i);
+                var span1 = document.createElement('span');
+                span1.style.fontWeight = '900';
+                span1.style.marginRight = '0.5rem';
+                span1.textContent = 'Doc ' + (i + 1) + ':';
+                var span2 = document.createElement('span');
+                span2.style.fontFamily = 'Courier New, monospace';
+                span2.textContent = documents[i];
+                div.appendChild(span1);
+                div.appendChild(span2);
+                docList.appendChild(div);
             }
-            docList.innerHTML = html;
 
             var wordButtons = document.getElementById('word-buttons');
+            wordButtons.innerHTML = '';
             var words = getAllWords();
-            html = '';
-            for (var i = 0; i < words.length; i++) {
-                var selectedClass = selectedWord === words[i] ? 'selected' : '';
-                html += '<button class="word-btn ' + selectedClass + '" onclick="selectWord(\'' + words[i] + '\')">';
-                html += words[i];
-                html += '</button>';
+            for (var w = 0; w < words.length; w++) {
+                var btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'word-btn' + (selectedWord === words[w] ? ' selected' : '');
+                btn.textContent = words[w];
+                (function(word){
+                    btn.addEventListener('click', function(){ selectWord(word); });
+                })(words[w]);
+                wordButtons.appendChild(btn);
             }
-            wordButtons.innerHTML = html;
 
             if (selectedWord) {
                 updateCalculations();
+            } else {
+                // ensure calc results hidden if no word selected
+                document.getElementById('calc-results').classList.add('hidden');
             }
+
+            // recreate icons for any new elements that use lucide (no-op for existing)
+            lucide.createIcons();
         }
 
         function selectDoc(idx) {
@@ -503,7 +536,7 @@
             document.getElementById('selected-word-display').textContent = selectedWord;
             document.getElementById('selected-doc-display').textContent = selectedDoc + 1;
 
-            var words = documents[selectedDoc].toLowerCase().split(' ');
+            var words = tokenize(documents[selectedDoc]);
             var termCount = 0;
             for (var i = 0; i < words.length; i++) {
                 if (words[i] === selectedWord) {
@@ -511,23 +544,23 @@
                 }
             }
             var tf = calculateTF(selectedWord, documents[selectedDoc]);
-            
+            var tfDisplay = isFinite(tf) ? tf.toFixed(4) : '0.0000';
             document.getElementById('tf-calc').textContent = 
                 'Word appears ' + termCount + ' times in ' + words.length + ' words';
-            document.getElementById('tf-score').textContent = 'TF = ' + tf.toFixed(4);
+            document.getElementById('tf-score').textContent = 'TF = ' + tfDisplay;
 
             var df = calculateDF(selectedWord);
             var idf = calculateIDF(selectedWord);
-            
+            var idfDisplay = isFinite(idf) ? idf.toFixed(4) : '0.0000';
             document.getElementById('idf-calc').textContent = 
                 'Word appears in ' + df + ' out of ' + documents.length + ' documents';
-            document.getElementById('idf-score').textContent = 'IDF = ' + idf.toFixed(4);
+            document.getElementById('idf-score').textContent = 'IDF = ' + idfDisplay;
 
             var tfidf = calculateTFIDF(selectedWord, selectedDoc);
-            
+            var tfidfDisplay = isFinite(tfidf) ? tfidf.toFixed(4) : '0.0000';
             document.getElementById('tfidf-calc').textContent = 
-                'TF * IDF = ' + tf.toFixed(4) + ' * ' + idf.toFixed(4);
-            document.getElementById('tfidf-score').textContent = 'TF-IDF = ' + tfidf.toFixed(4);
+                'TF * IDF = ' + tfDisplay + ' * ' + idfDisplay;
+            document.getElementById('tfidf-score').textContent = 'TF-IDF = ' + tfidfDisplay;
         }
 
         function renderMatrix() {
@@ -553,8 +586,8 @@
                     } else if (score > 0.05) {
                         bgColor = '#fde047';
                     }
-                    
-                    html += '<td style="background-color: ' + bgColor + '">' + score.toFixed(3) + '</td>';
+                    var scoreStr = (isFinite(score) ? score.toFixed(3) : '0.000');
+                    html += '<td style="background-color: ' + bgColor + '">' + scoreStr + '</td>';
                 }
                 
                 html += '</tr>';
@@ -562,8 +595,12 @@
 
             html += '</tbody>';
             table.innerHTML = html;
+
+            // ensure icons exist if any (no-op)
+            lucide.createIcons();
         }
 
+        // initial render
         renderCalculator();
     </script>
 </body>
