@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TF-IDF Interactive Lab</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/lucide/0.263.1/umd/lucide.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: Arial Black, Arial, sans-serif;
+            background: linear-gradient(135deg, #fef08a 0%, #fbcfe8 50%, #bfdbfe 100%);
+            min-height: 100vh;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        header {
+            background: #a855f7;
+            border: 4px solid black;
+            padding: 2rem;
+            margin-bottom: 2rem;
+            box-shadow: 12px 12px 0px 0px rgba(0,0,0,1);
+        }
+        h1 {
+            font-size: 3rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            color: white;
+            text-shadow: 3px 3px 0px rgba(0,0,0,1);
+        }
+        .subtitle {
+            font-size: 1.25rem;
+            font-weight: bold;
+        }
+        .tab-buttons {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            flex-wrap: wrap;
+        }
+        .tab-btn {
+            padding: 0.75rem 1.5rem;
+            border: 4px solid black;
+            font-weight: 900;
+            text-transform: uppercase;
+            font-size: 1.125rem;
+            cursor: pointer;
+            background: white;
+            box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+        .tab-btn:hover {
+            transform: translate(2px, 2px);
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+        }
+        .tab-btn.active {
+            transform: translate(1px, 1px);
+            box-shadow: 6px 6px 0px 0px rgba(0,0,0,1);
+        }
+        .tab-btn.learn.active { background: #facc15; }
+        .tab-btn.calculator.active { background: #f472b6; }
+        .tab-btn.matrix.active { background: #22d3ee; }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .card {
+            border: 4px solid black;
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+            box-shadow: 8px 8px 0px 0px rgba(0,0,0,1);
+        }
+        .yellow-card { background: #fde047; }
+        .pink-card { background: #fda4af; }
+        .cyan-card { background: #67e8f9; }
+        .green-card { background: #86efac; }
+        .purple-card { background: #d8b4fe; }
+        .orange-card { background: #fed7aa; }
+        .blue-card { background: #bfdbfe; }
+        .green-light-card { background: #bbf7d0; }
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+        .formula-box {
+            background: white;
+            border: 3px solid black;
+            padding: 1rem;
+            font-family: Courier New, monospace;
+            margin: 1rem 0;
+        }
+        h3 {
+            font-size: 1.5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+        h4 {
+            font-size: 1.25rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            margin-bottom: 0.75rem;
+        }
+        .doc-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .doc-item {
+            background: white;
+            border: 4px solid black;
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .doc-item:hover {
+            background: #fef3c7;
+        }
+        .doc-item.selected {
+            background: #fef08a;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+        }
+        .word-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.75rem;
+        }
+        .word-btn {
+            padding: 0.5rem 1rem;
+            border: 3px solid black;
+            font-weight: bold;
+            text-transform: uppercase;
+            font-size: 0.875rem;
+            cursor: pointer;
+            background: white;
+            box-shadow: 4px 4px 0px 0px rgba(0,0,0,1);
+            transition: all 0.2s;
+        }
+        .word-btn:hover {
+            background: #fbcfe8;
+        }
+        .word-btn.selected {
+            background: #f472b6;
+            transform: translate(1px, 1px);
+        }
+        .calc-result {
+            background: white;
+            border: 3px solid black;
+            padding: 1rem;
+            margin-bottom: 1rem;
+        }
+        .calc-result p {
+            margin-bottom: 0.5rem;
+        }
+        .score {
+            font-size: 1.5rem;
+            font-weight: 900;
+            margin-top: 0.5rem;
+        }
+        .final-score {
+            background: #fde047;
+            border: 3px solid black;
+            padding: 1rem;
+        }
+        .final-score .score {
+            font-size: 2rem;
+            color: #7c3aed;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            border: 4px solid black;
+            box-shadow: 8px 8px 0px 0px rgba(0,0,0,1);
+        }
+        th, td {
+            border: 3px solid black;
+            padding: 0.75rem;
+            text-align: center;
+        }
+        th {
+            background: #fda4af;
+            font-weight: 900;
+            text-transform: uppercase;
+        }
+        tbody tr:nth-child(even) {
+            background: #fef08a;
+        }
+        td:first-child {
+            font-family: Courier New, monospace;
+            font-weight: bold;
+            text-align: left;
+        }
+        footer {
+            background: black;
+            color: white;
+            border: 4px solid black;
+            padding: 1.5rem;
+            margin-top: 3rem;
+            text-align: center;
+            box-shadow: 8px 8px 0px 0px rgba(255,255,255,0.3);
+        }
+        .observation-list {
+            margin-top: 1rem;
+        }
+        .observation-list p {
+            margin-bottom: 0.5rem;
+            font-size: 1.125rem;
+        }
+        .hidden {
+            display: none;
+        }
+        .table-wrapper {
+            overflow-x: auto;
+            margin-bottom: 1.5rem;
+        }
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2rem;
+            }
+            body {
+                padding: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>TF-IDF Interactive Lab</h1>
+            <p class="subtitle">Natural Language Processing for Grade 12</p>
+        </header>
+
+        <div class="tab-buttons">
+            <button class="tab-btn learn active" onclick="switchTab('learn')">
+                <i data-lucide="book-open"></i>
+                Learn
+            </button>
+            <button class="tab-btn calculator" onclick="switchTab('calculator')">
+                <i data-lucide="calculator"></i>
+                Calculator
+            </button>
+            <button class="tab-btn matrix" onclick="switchTab('matrix')">
+                <i data-lucide="play"></i>
+                Full Matrix
+            </button>
+        </div>
+
+        <div id="learn-tab" class="tab-content active">
+            <div class="card yellow-card">
+                <h3>
+                    <i data-lucide="lightbulb"></i>
+                    What is TF-IDF?
+                </h3>
+                <p style="font-size: 1.125rem; line-height: 1.6;">
+                    <strong>TF-IDF</strong> (Term Frequency-Inverse Document Frequency) is a numerical statistic 
+                    that shows how important a word is to a document in a collection of documents.
+                </p>
+            </div>
+
+            <div class="grid-2">
+                <div class="card pink-card">
+                    <h4>TF - Term Frequency</h4>
+                    <p style="font-size: 1.125rem; margin-bottom: 1rem;">How often a word appears in a document.</p>
+                    <div class="formula-box">
+                        TF = (Times word appears) / (Total words in document)
+                    </div>
+                    <p style="margin-top: 1rem;">
+                        <strong>Example:</strong> If cat appears 2 times in a 10-word document, TF = 2/10 = 0.2
+                    </p>
+                </div>
+
+                <div class="card cyan-card">
+                    <h4>IDF - Inverse Document Frequency</h4>
+                    <p style="font-size: 1.125rem; margin-bottom: 1rem;">How rare or common a word is across all documents.</p>
+                    <div class="formula-box">
+                        IDF = log(Total documents / Documents with word)
+                    </div>
+                    <p style="margin-top: 1rem;">
+                        <strong>Example:</strong> If cat appears in 2 out of 10 documents, IDF = log(10/2) = 1.61
+                    </p>
+                </div>
+            </div>
+
+            <div class="card green-card">
+                <h4>Final TF-IDF Score</h4>
+                <div class="formula-box" style="font-size: 1.5rem; text-align: center; font-weight: bold; padding: 1.5rem;">
+                    TF-IDF = TF * IDF
+                </div>
+                <div class="observation-list">
+                    <p><strong>High TF-IDF:</strong> Word is frequent in this document but rare overall</p>
+                    <p><strong>Low TF-IDF:</strong> Word is either rare in this document or common everywhere</p>
+                </div>
+            </div>
+        </div>
+
+        <div id="calculator-tab" class="tab-content">
+            <div class="card purple-card">
+                <h3>
+                    <i data-lucide="calculator"></i>
+                    Interactive TF-IDF Calculator
+                </h3>
+                <p style="font-size: 1.125rem;">Select a word and document to see TF-IDF in action!</p>
+            </div>
+
+            <div class="card orange-card">
+                <h4>Our Document Collection:</h4>
+                <div class="doc-list" id="doc-list"></div>
+            </div>
+
+            <div class="card blue-card">
+                <h4>Select a Word:</h4>
+                <div class="word-buttons" id="word-buttons"></div>
+            </div>
+
+            <div id="calc-results" class="card green-light-card hidden">
+                <h4>Calculations for "<span id="selected-word-display"></span>" in Doc <span id="selected-doc-display"></span></h4>
+                
+                <div class="calc-result">
+                    <p style="font-weight: bold; font-size: 1.125rem; margin-bottom: 0.5rem;">1. Term Frequency (TF)</p>
+                    <p style="font-family: Courier New, monospace; margin-bottom: 0.5rem;" id="tf-calc"></p>
+                    <p class="score" style="color: #db2777;" id="tf-score"></p>
+                </div>
+
+                <div class="calc-result">
+                    <p style="font-weight: bold; font-size: 1.125rem; margin-bottom: 0.5rem;">2. Inverse Document Frequency (IDF)</p>
+                    <p style="font-family: Courier New, monospace; margin-bottom: 0.5rem;" id="idf-calc"></p>
+                    <p class="score" style="color: #0891b2;" id="idf-score"></p>
+                </div>
+
+                <div class="final-score">
+                    <p style="font-weight: bold; font-size: 1.125rem; margin-bottom: 0.5rem;">3. Final TF-IDF Score</p>
+                    <p style="font-family: Courier New, monospace; margin-bottom: 0.5rem;" id="tfidf-calc"></p>
+                    <p class="score" id="tfidf-score"></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="matrix-tab" class="tab-content">
+            <div class="card cyan-card">
+                <h3>Complete TF-IDF Matrix</h3>
+                <p style="font-size: 1.125rem;">This shows TF-IDF scores for every word in every document!</p>
+            </div>
+
+            <div class="table-wrapper">
+                <table id="tfidf-table"></table>
+            </div>
+
+            <div class="card green-card">
+                <h4>Observations</h4>
+                <div class="observation-list">
+                    <p>GREEN - <strong>High scores:</strong> Words that are unique to specific documents</p>
+                    <p>YELLOW - <strong>Medium scores:</strong> Somewhat distinctive words</p>
+                    <p>WHITE - <strong>Low scores:</strong> Common words appearing everywhere (like the)</p>
+                </div>
+            </div>
+        </div>
+
+        <footer>
+            <p style="font-weight: bold; font-size: 1.125rem;">
+                Understanding TF-IDF helps in document similarity, search engines, and keyword extraction!
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        lucide.createIcons();
+
+        var documents = [
+            "the cat loves to play with the ball",
+            "the dog loves to run in the park",
+            "the bird sings beautifully in the morning"
+        ];
+
+        var selectedDoc = 0;
+        var selectedWord = '';
+
+        function calculateTF(term, doc) {
+            var words = doc.toLowerCase().split(' ');
+            var termCount = 0;
+            for (var i = 0; i < words.length; i++) {
+                if (words[i] === term.toLowerCase()) {
+                    termCount++;
+                }
+            }
+            return termCount / words.length;
+        }
+
+        function calculateDF(term) {
+            var count = 0;
+            for (var i = 0; i < documents.length; i++) {
+                var words = documents[i].toLowerCase().split(' ');
+                if (words.indexOf(term.toLowerCase()) !== -1) {
+                    count++;
+                }
+            }
+            return count;
+        }
+
+        function calculateIDF(term) {
+            var df = calculateDF(term);
+            if (df === 0) return 0;
+            return Math.log(documents.length / df);
+        }
+
+        function calculateTFIDF(term, docIndex) {
+            var tf = calculateTF(term, documents[docIndex]);
+            var idf = calculateIDF(term);
+            return tf * idf;
+        }
+
+        function getAllWords() {
+            var allWords = documents.join(' ').toLowerCase().split(' ');
+            var uniqueWords = [];
+            for (var i = 0; i < allWords.length; i++) {
+                if (uniqueWords.indexOf(allWords[i]) === -1) {
+                    uniqueWords.push(allWords[i]);
+                }
+            }
+            return uniqueWords.sort();
+        }
+
+        function switchTab(tabName) {
+            var tabs = document.querySelectorAll('.tab-content');
+            for (var i = 0; i < tabs.length; i++) {
+                tabs[i].classList.remove('active');
+            }
+            
+            var buttons = document.querySelectorAll('.tab-btn');
+            for (var i = 0; i < buttons.length; i++) {
+                buttons[i].classList.remove('active');
+            }
+            
+            document.getElementById(tabName + '-tab').classList.add('active');
+            document.querySelector('.tab-btn.' + tabName).classList.add('active');
+            
+            if (tabName === 'calculator') {
+                renderCalculator();
+            } else if (tabName === 'matrix') {
+                renderMatrix();
+            }
+        }
+
+        function renderCalculator() {
+            var docList = document.getElementById('doc-list');
+            var html = '';
+            for (var i = 0; i < documents.length; i++) {
+                var selectedClass = selectedDoc === i ? 'selected' : '';
+                html += '<div class="doc-item ' + selectedClass + '" onclick="selectDoc(' + i + ')">';
+                html += '<span style="font-weight: 900; margin-right: 0.5rem;">Doc ' + (i + 1) + ':</span>';
+                html += '<span style="font-family: Courier New, monospace;">' + documents[i] + '</span>';
+                html += '</div>';
+            }
+            docList.innerHTML = html;
+
+            var wordButtons = document.getElementById('word-buttons');
+            var words = getAllWords();
+            html = '';
+            for (var i = 0; i < words.length; i++) {
+                var selectedClass = selectedWord === words[i] ? 'selected' : '';
+                html += '<button class="word-btn ' + selectedClass + '" onclick="selectWord(\'' + words[i] + '\')">';
+                html += words[i];
+                html += '</button>';
+            }
+            wordButtons.innerHTML = html;
+
+            if (selectedWord) {
+                updateCalculations();
+            }
+        }
+
+        function selectDoc(idx) {
+            selectedDoc = idx;
+            renderCalculator();
+        }
+
+        function selectWord(word) {
+            selectedWord = word;
+            renderCalculator();
+        }
+
+        function updateCalculations() {
+            var resultsDiv = document.getElementById('calc-results');
+            resultsDiv.classList.remove('hidden');
+
+            document.getElementById('selected-word-display').textContent = selectedWord;
+            document.getElementById('selected-doc-display').textContent = selectedDoc + 1;
+
+            var words = documents[selectedDoc].toLowerCase().split(' ');
+            var termCount = 0;
+            for (var i = 0; i < words.length; i++) {
+                if (words[i] === selectedWord) {
+                    termCount++;
+                }
+            }
+            var tf = calculateTF(selectedWord, documents[selectedDoc]);
+            
+            document.getElementById('tf-calc').textContent = 
+                'Word appears ' + termCount + ' times in ' + words.length + ' words';
+            document.getElementById('tf-score').textContent = 'TF = ' + tf.toFixed(4);
+
+            var df = calculateDF(selectedWord);
+            var idf = calculateIDF(selectedWord);
+            
+            document.getElementById('idf-calc').textContent = 
+                'Word appears in ' + df + ' out of ' + documents.length + ' documents';
+            document.getElementById('idf-score').textContent = 'IDF = ' + idf.toFixed(4);
+
+            var tfidf = calculateTFIDF(selectedWord, selectedDoc);
+            
+            document.getElementById('tfidf-calc').textContent = 
+                'TF * IDF = ' + tf.toFixed(4) + ' * ' + idf.toFixed(4);
+            document.getElementById('tfidf-score').textContent = 'TF-IDF = ' + tfidf.toFixed(4);
+        }
+
+        function renderMatrix() {
+            var words = getAllWords();
+            var table = document.getElementById('tfidf-table');
+            
+            var html = '<thead><tr><th>Word</th>';
+            for (var i = 0; i < documents.length; i++) {
+                html += '<th>Doc ' + (i + 1) + '</th>';
+            }
+            html += '</tr></thead><tbody>';
+
+            for (var w = 0; w < words.length; w++) {
+                var bgStyle = w % 2 === 0 ? 'background: #fef08a' : 'background: white';
+                html += '<tr style="' + bgStyle + '">';
+                html += '<td>' + words[w] + '</td>';
+                
+                for (var d = 0; d < documents.length; d++) {
+                    var score = calculateTFIDF(words[w], d);
+                    var bgColor = 'transparent';
+                    if (score > 0.15) {
+                        bgColor = '#86efac';
+                    } else if (score > 0.05) {
+                        bgColor = '#fde047';
+                    }
+                    
+                    html += '<td style="background-color: ' + bgColor + '">' + score.toFixed(3) + '</td>';
+                }
+                
+                html += '</tr>';
+            }
+
+            html += '</tbody>';
+            table.innerHTML = html;
+        }
+
+        renderCalculator();
+    </script>
+</body>
+</html>
